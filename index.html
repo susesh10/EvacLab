@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>EvacLab · Evacuation Simulator</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="./style.css?v=2">
+  <script type="module" src="./app.js"></script>
+</head>
+<body>
+<main>
+  <header>
+    <div><p class="eyebrow">HACKWITHADITYA · LEVEL 1 PROTOTYPE</p><h1>EvacLab<span>.</span></h1><p>Build a floor plan. Simulate evacuation routes.</p></div>
+    <span class="badge">Educational simulation</span>
+  </header>
+  <div class="layout">
+    <section class="card plan">
+      <div class="section-head"><div><h2 id="plan-title">Four-room building</h2></div><button id="edit" type="button">Edit floor plan</button></div>
+      <div id="editor" hidden>
+        <fieldset class="tools"><legend>Paint a cell</legend>
+          <label><input type="radio" name="brush" value="#" checked>Wall</label>
+          <label><input type="radio" name="brush" value=".">Floor</label>
+          <label><input type="radio" name="brush" value="E">Exit</label>
+          <label><input type="radio" name="brush" value="P">Occupant</label>
+        </fieldset>
+        <p class="hint" id="edit-help">Click cells to paint. Use arrow keys to move and Enter or Space to paint. Each cell holds one item.</p>
+        <div class="grid-wrap"><div id="grid" role="grid" aria-label="Editable floor plan" aria-describedby="edit-help"></div></div>
+        <p id="editor-message" role="status"></p>
+        <div class="actions"><button id="apply" class="primary" type="button">Use this floor plan</button><button id="cancel" type="button">Cancel</button><button id="clear" type="button">Clear grid</button></div>
+      </div>
+      <div id="simulation-view">
+        <div class="map-meta"><span>23 × 12 grid</span><span>One step = 0.5 simulated seconds</span></div>
+        <canvas id="map" role="img" aria-label="Building floor plan with occupants and routes to open exits"></canvas>
+        <div class="legend"><span><i class="person"></i>Occupant</span><span><i class="route"></i>Route</span><span><i class="open"></i>Open exit</span><span><i class="closed"></i>Blocked exit</span></div>
+      </div>
+    </section>
+    <aside class="card controls">
+      <h2>Evacuation controls</h2>
+      <div class="timer"><span id="clock">0.0</span><span>simulated seconds</span></div>
+      <div class="actions"><button type="button" id="play" class="primary">Start simulation</button><button type="button" id="reset">Reset</button></div>
+      <p id="status" role="status">Ready to start</p>
+      <div class="progress-track" aria-hidden="true"><div id="progress"></div></div>
+      <p class="tally"><strong id="evacuated">0 / 12</strong> occupants evacuated</p>
+      <fieldset id="closures"><legend>Block an exit to reroute</legend><div id="exit-toggles"></div></fieldset>
+      <button id="restore" type="button" class="text-button">Restore example building</button>
+    </aside>
+  </div>
+  <section class="card comparison">
+    <div class="section-head"><div><h2>Evacuation time comparison</h2></div><label class="select-label">Close in comparison<select id="comparison-exit"></select></label></div>
+    <p class="hint">Same floor plan and starting positions. The selected exit is closed from the start of the second run.</p>
+    <div class="table-wrap"><table><thead><tr><th scope="col">Scenario</th><th scope="col">Last out</th><th scope="col">Mean arrival*</th><th scope="col">Evacuated</th></tr></thead><tbody id="results"></tbody></table></div>
+    <p id="difference"></p><p class="hint">*Mean arrival includes evacuated occupants only. “Incomplete” means some occupants have no available route.</p>
+  </section>
+  <footer><strong>Simulation limitations</strong><p>This simulation uses a fixed walking speed and allows occupants to overlap. It does not model crowds, smoke or reaction delays. The times are estimates for this model. Follow approved procedures in real emergencies.</p></footer>
+</main>
+</body>
+</html>
