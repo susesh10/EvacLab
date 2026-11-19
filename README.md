@@ -38,11 +38,23 @@ Click **Start simulation** to begin. Tick an exit checkbox to block it. People s
 
 **Reset** restarts the current layout. **Restore example building** brings back the original building.
 
-To create a map, click **Edit floor plan**. Pick Wall, Floor, Exit or Occupant and click a cell to place it. Use Floor to erase an item. You can also move with the arrow keys and use Enter or Space to place an item.
+To create a map, click **Edit floor plan**. Pick Wall, Floor, Exit, Occupant or Fire and click a cell to place it. Use Floor to erase an item. You can also move with the arrow keys and use Enter or Space to place an item.
 
 Click **Use this floor plan** when you are done. Each occupant needs a route to an exit before the map can be used. **Cancel** discards your edits.
 
 The comparison uses the same map and starting positions for both runs. Choose an exit under **Close in comparison** to block it from the beginning of the second run. This comparison is separate from the live run.
+
+## Fire scenarios
+
+Use the Fire brush in the floor-plan editor to place one or more sources. Floor erases a source. Reset restores the initial sources.
+
+The moderate setting is illustrative: fire spreads one cell north, south, east and west every 2 simulated seconds. Walls stop it. There is no diagonal spread, material model, smoke, wind or temperature calculation. Each cell holds one item, so place sources on separate cells from occupants and exits.
+
+Burning cells are excluded from routes. Fire can reach and close an exit even when its manual checkbox is unchecked. Routes update at each spread. Fire spreads before people move on a shared tick. Anyone reached by fire is marked affected and stops moving. Trapped means an occupant currently has no safe route. Fire continues spreading while trapped occupants remain, until it stops growing or everyone has evacuated or been affected.
+
+With fire present the clock continues while fire can grow, including when all exits are manually blocked. Pausing pauses both movement and fire. Each repeated run is deterministic.
+
+The comparison includes the same starting fire sources in the open-exit and blocked-exit scenarios, plus an all-exits-open baseline without fire. Incomplete runs show trapped and affected counts. Mean arrival includes evacuated occupants only.
 
 ## How routing works
 
@@ -55,7 +67,7 @@ The app uses breadth-first search from all open exits. Since every step has the 
 - Maps have to be drawn manually. Image and PDF uploads are not supported.
 - People move at the same speed and can overlap.
 - Crowd congestion, exit capacity, smoke and reaction delays are not included.
-- The simulation clock pauses when everyone still inside has no available route.
+- Without growing fire, the simulation clock pauses when everyone still inside has no available route.
 - An incomplete comparison means some people could not get out. The average time only includes people who reached an exit.
 
 This is an educational prototype. Its times should not be used for real evacuation planning.

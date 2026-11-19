@@ -85,3 +85,60 @@ test('open grid edges never wrap into another row', async () => {
   const layout = layoutFromGrid(['..E', 'P..'].map(row => [...row]));
   assert.equal(compare(layout)[0].total, 1.5);
 });
+
+test('fire spreads simultaneously every two seconds and stops at walls and edges', async () => {
+  const { layoutFromGrid } = await import('../simulation.js');
+  const sim = createSimulation(['Exit 1'], layoutFromGrid(['F.#E', '..#P'].map(row => [...row])));
+  for (let i = 0; i < 3; i++) assert.equal(advance(sim), true);
+  assert.deepEqual([...sim.fire], [0]);
+  advance(sim);
+  assert.deepEqual([...sim.fire].sort((a, b) => a - b), [0, 1, 4]);
+  for (let i = 0; i < 4; i++) advance(sim);
+  assert.deepEqual([...sim.fire].sort((a, b) => a - b), [0, 1, 4, 5]);
+  assert.equal(metrics(sim).affected, 0);
+});
+
+test('growing fire reaches waiting occupants and comparison terminates', async () => {
+  const { layoutFromGrid, validateLayout } = await import('../simulation.js');
+  const layout = layoutFromGrid(['EFP'].map(row => [...row]));
+  assert.equal(validateLayout(layout), '');
+  const sim = createSimulation([], layout);
+  assert.equal(metrics(sim).waiting, 1);
+  for (let i = 0; i < 4; i++) assert.equal(advance(sim), true);
+  assert.equal(metrics(sim).affected, 1);
+  assert.equal(metrics(sim).waiting, 0);
+  assert.equal(metrics(sim).evacuated, 0);
+  assert.equal(advance(sim), false);
+  const results = compare(layout);
+  assert.ok(results.every(result => result.affected === 1 && result.total === null));
+});
+
+test('fire reroutes occupants and a burning exit stays closed when manually reopened', async () => {
+  const { layoutFromGrid } = await import('../simulation.js');
+  const layout = layoutFromGrid(['F...#...E', 'E...P....'].map(row => [...row]));
+  const sim = createSimulation([], layout);
+  for (let i = 0; i < 4; i++) advance(sim);
+  assert.equal(sim.occupants[0].cell, 11);
+  let cell = sim.occupants[0].cell;
+  while (sim.next.get(cell) !== cell) cell = sim.next.get(cell);
+  assert.equal(cell, layout.exits['Exit 1']);
+  for (const burning of sim.fire) assert.equal(sim.next.has(burning), false);
+  const blocked = createSimulation(['Exit 1', 'Exit 2'], layout);
+  for (let i = 0; i < 4; i++) advance(blocked);
+  assert.equal(blocked.fire.has(layout.exits['Exit 2']), true);
+  setExitBlocked(blocked, 'Exit 2', false);
+  assert.equal(blocked.next.has(layout.exits['Exit 2']), false);
+  assert.deepEqual(compare(layout), compare(layout));
+});
+
+test('fire cannot wrap across an open grid boundary and reset restores sources', async () => {
+  const { layoutFromGrid } = await import('../simulation.js');
+  const layout = layoutFromGrid(['..F', 'P.E'].map(row => [...row]));
+  const sim = createSimulation(['Exit 1'], layout);
+  for (let i = 0; i < 4; i++) advance(sim);
+  assert.equal(sim.fire.has(3), false);
+  assert.equal(sim.fire.has(1), true);
+  assert.equal(sim.fire.has(5), true);
+  assert.deepEqual([...createSimulation([], layout).fire], [2]);
+  assert.deepEqual(layout.fires, [2]);
+});

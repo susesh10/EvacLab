@@ -40,10 +40,19 @@ function draw(progress) {
     }
   }));
 
+  for (const cell of sim.fire) {
+    const [x, y] = center(cell);
+    ctx.fillStyle = '#eb6028';
+    ctx.fillRect(x - tile / 2, y - tile / 2, tile, tile);
+    ctx.fillStyle = '#fff0a0';
+    ctx.font = 'bold 20px system-ui';
+    ctx.fillText('♨', x - 9, y + 7);
+  }
+
   ctx.strokeStyle = '#65e4d57a';
   ctx.lineWidth = 2;
   for (const person of sim.occupants) {
-    if (person.arrival !== null || !sim.next.has(person.cell)) continue;
+    if (person.affected || person.arrival !== null || !sim.next.has(person.cell)) continue;
     let cell = person.cell;
     ctx.beginPath();
     ctx.moveTo(...center(cell));
@@ -55,7 +64,7 @@ function draw(progress) {
   }
 
   sim.occupants.forEach((person, index) => {
-    if (person.arrival !== null) return;
+    if (person.affected || person.arrival !== null) return;
     const [fromX, fromY] = center(person.cell);
     const [x, y] = center(sim.next.get(person.cell) ?? person.cell);
     const angle = index * 2.4;
@@ -74,14 +83,15 @@ function update() {
   element('clock').textContent = result.elapsed.toFixed(1);
   element('evacuated').textContent = `${result.evacuated} / ${sim.occupants.length}`;
   element('progress').style.width = (100 * result.evacuated / sim.occupants.length) + '%';
-  const complete = result.total !== null;
+  element('hazards').textContent = result.waiting + ' trapped · ' + result.affected + ' affected · ' + result.burning + ' burning cells';
+  const complete = result.evacuated + result.affected === sim.occupants.length;
   play.disabled = complete || editing;
   element('reset').disabled = editing;
   element('closures').disabled = editing;
   element('restore').disabled = editing;
   play.textContent = complete ? 'Done' : running ? 'Pause' : started ? 'Resume' : 'Start simulation';
-  const status = editing ? 'Editing floor plan · simulation paused' : complete ? `Complete in ${seconds(result.total)}`
-    : result.waiting ? `${result.waiting} waiting for an open route`
+  const status = editing ? 'Editing floor plan · simulation paused' : complete ? (result.affected ? 'Finished · ' + result.affected + ' affected by fire' : `Complete in ${seconds(result.total)}`)
+    : result.waiting ? `${result.waiting} trapped without an open route`
     : running ? 'Evacuation in progress' : started ? 'Paused' : 'Ready';
   if (element('status').textContent !== status) element('status').textContent = status;
 }
@@ -90,7 +100,8 @@ function frame(now) {
   const interval = stepSeconds * 1000;
   if (running && now - lastStep >= interval) {
     advance(sim);
-    if (metrics(sim).total !== null) running = false;
+    const result = metrics(sim);
+    if (result.evacuated + result.affected === sim.occupants.length) running = false;
     lastStep = now;
     update();
   }
@@ -129,20 +140,24 @@ function resetSimulation() {
 function updateComparison() {
   const closedExit = element('comparison-exit').value;
   const [baseline, blocked] = compare(layout, closedExit);
+  const scenarios = [['All exits open', baseline], [closedExit + ' blocked', blocked]];
+  if (layout.fires?.length) {
+    scenarios.unshift(['No fire · all exits open', compare({ ...layout, fires: [] }, closedExit)[0]]);
+  }
   element('results').replaceChildren();
-  for (const [label, result] of [['All exits open', baseline], [closedExit + ' blocked', blocked]]) {
+  for (const [label, result] of scenarios) {
     const row = element('results').insertRow();
     const heading = document.createElement('th');
     heading.scope = 'row';
     heading.textContent = label;
     row.append(heading);
     for (const value of [result.total === null ? 'Incomplete' : seconds(result.total),
-      seconds(result.mean), result.evacuated + ' / ' + layout.starts.length]) {
+      seconds(result.mean), result.evacuated + ' / ' + layout.starts.length, result.waiting, result.affected]) {
       row.insertCell().textContent = value;
     }
   }
-  element('difference').textContent = blocked.total === null
-    ? blocked.waiting + ' occupant(s) cannot reach an open exit in the closure scenario.'
+  element('difference').textContent = baseline.total === null || blocked.total === null
+    ? 'An incomplete scenario has occupants trapped or affected by fire. See the outcome counts above.'
     : 'Closing ' + closedExit + ' adds ' + seconds(blocked.total - baseline.total) + ' to the last occupant’s exit time.';
 }
 
@@ -160,12 +175,12 @@ function loadLayout(nextLayout) {
   updateComparison();
 }
 
-const tileNames = { '#': 'wall', '.': 'floor', E: 'exit', P: 'occupant' };
+const tileNames = { '#': 'wall', '.': 'floor', E: 'exit', P: 'occupant', F: 'fire' };
 
 function refreshCell(button, x, y) {
   const symbol = draft[y][x];
   button.className = 'cell ' + tileNames[symbol];
-  button.textContent = symbol === 'P' ? '●' : symbol === 'E' ? 'E' : '';
+  button.textContent = symbol === 'P' ? '●' : symbol === 'E' ? 'E' : symbol === 'F' ? '♨' : '';
   button.setAttribute('aria-label', 'Row ' + (y + 1) + ', column ' + (x + 1) + ', ' + tileNames[symbol]);
 }
 
@@ -222,6 +237,7 @@ element('edit').addEventListener('click', () => {
   editing = true;
   draft = layout.floor.map(row => [...row].map(symbol => symbol === '#' ? '#' : '.'));
   for (const cell of Object.values(layout.exits)) draft[Math.floor(cell / columns)][cell % columns] = 'E';
+  for (const cell of layout.fires ?? []) draft[Math.floor(cell / columns)][cell % columns] = 'F';
   for (const [x, y] of layout.starts) draft[y][x] = 'P';
   element('editor-message').textContent = '';
   renderEditor();

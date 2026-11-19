@@ -71,3 +71,5 @@ footer strong { color: #d5dfe6; font-weight: 500; }
 @media (max-width: 520px) { main { width: calc(100% - 24px); margin-top: 24px; } .card { padding: 16px; } .section-head { align-items: flex-start; flex-wrap: wrap; } .map-meta { flex-direction: column; gap: 2px; } th, td { padding: 12px 4px; font-size: .72rem; } }
 @media (prefers-reduced-motion: reduce) { #progress { transition: none; } }
 .card { min-width: 0; }
+
+.cell.fire, .legend i.fire { background: #eb6028; color: #fff0a0; }
